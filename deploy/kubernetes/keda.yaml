@@ -1,0 +1,59 @@
+# KEDA follows the replica counts the autoscaler publishes (AverageValue / 1 =
+# replicas). The reflex scales *up* directly in ~1-3 s; KEDA/HPA owns scale-down.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: web
+spec:
+  scaleTargetRef: {name: web}
+  minReplicaCount: 1
+  maxReplicaCount: 8
+  # If the autoscaler is blind or stale it answers HTTP 503; after
+  # failureThreshold failures KEDA holds `replicas` instead of reading "no load".
+  fallback:
+    failureThreshold: 3
+    replicas: 4
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+            - {type: Pods, value: 8, periodSeconds: 15}
+        scaleDown:                      # fast up, slow settle
+          stabilizationWindowSeconds: 180
+          policies:
+            - {type: Percent, value: 25, periodSeconds: 30}
+  triggers:
+    - type: metrics-api
+      metricType: AverageValue
+      metadata:
+        url: "http://granian-k8s-autoscaler.default.svc.cluster.local:8080/v1/scalers/web"
+        format: json
+        valueLocation: desired
+        targetValue: "1"
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: worker
+spec:
+  scaleTargetRef: {name: worker}
+  minReplicaCount: 1
+  maxReplicaCount: 8
+  fallback: {failureThreshold: 3, replicas: 4}
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 180
+          policies:
+            - {type: Percent, value: 25, periodSeconds: 30}
+  triggers:
+    - type: metrics-api
+      metricType: AverageValue
+      metadata:
+        url: "http://granian-k8s-autoscaler.default.svc.cluster.local:8080/v1/scalers/workers"
+        format: json
+        valueLocation: desired
+        targetValue: "1"

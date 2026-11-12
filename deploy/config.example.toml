@@ -1,0 +1,44 @@
+# Every key is optional except what you want to scale. Unknown keys are errors.
+namespace = ""            # empty: the pod's own namespace
+dry_run = false           # true: log decisions, never write to the Kubernetes API
+
+[server]
+host = "0.0.0.0"
+port = 8080
+
+[web]
+name = "web"              # scaler name -> /v1/scalers/web
+deployment = "web"
+service = "web"           # Service whose EndpointSlices list the web pods
+metrics_port = 9090       # granian --metrics-port
+min_replicas = 1
+max_replicas = 8
+threads_per_pod = 192     # granian --workers x --blocking-threads (0 = learn from metrics)
+target_utilization = 0.7  # headroom = 1 - this
+reserve_fraction = 0.25   # ready pods kept above measured demand
+reserve_min_pods = 1
+
+[web.reflex]
+enabled = true
+confirm_sec = 1.5
+overload_pod_fraction = 0.5
+max_step_pods = 4
+
+[web.guard]
+efficiency = 0.25
+freeze_sec = 120
+
+[web.service_time]
+sizing_inflation_cap = 1.5   # bounds loop gain when a dependency slows down
+
+[redis]
+host = "redis"
+queue_key = "rq:queue:{queue}"
+
+[[queues]]
+name = "workers"
+deployment = "worker"
+queues = ["default", "short", "long"]
+min_replicas = 1
+max_replicas = 8
+target_drain_sec = 30
