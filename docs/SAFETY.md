@@ -41,8 +41,8 @@ runs away to `max_replicas`. A test without such a control could pass for the wr
 
 Each of these single-line mutations makes the suite fail: remove the step bound; remove the
 in-flight gate; ignore the guard freeze; report healthy when blind; remove the publish clamp;
-reflex without confirmation; ignore the pod-fraction rule; reflex without a queue. Run
-`mutmut`/equivalent on changes to `core/`.
+reflex without confirmation; ignore the pod-fraction rule; reflex without a queue. Reproduce with
+`python scripts/mutation_check.py`; run it after changing `core/`.
 
 ## NOT established
 
