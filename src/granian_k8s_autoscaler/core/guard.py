@@ -35,6 +35,8 @@ class Guard:
             self.settle_from = None
 
     def observe(self, now: float, ready: int, throughput: float | None, saturated: bool) -> list[Event]:
+        if self.failures and now >= self.until + self.cfg.failure_decay_sec:
+            self.failures = 0
         if self.pending is None:
             return []
         t0, old, new, mu0 = self.pending
@@ -43,6 +45,12 @@ class Guard:
             return []
         if ready < new:
             self.settle_from = None
+            # The reading at scale time can be a burst peak the old pods cannot
+            # sustain. While the new pods start, the old ones stay saturated and
+            # the smoothed throughput settles to what they really deliver; judge
+            # against the lowest of those readings so a spike cannot fake a failure.
+            if throughput is not None and throughput > 0:
+                self.pending = (t0, old, new, min(mu0, throughput))
             return []
         if self.settle_from is None:
             self.settle_from = now

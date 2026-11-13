@@ -27,6 +27,7 @@ max_step_pods = 4
 [web.guard]
 efficiency = 0.25
 freeze_sec = 120
+failure_decay_sec = 300      # failure count (doubling freeze, 1-pod probing) resets this long after a freeze
 
 [web.service_time]
 sizing_inflation_cap = 1.5   # bounds loop gain when a dependency slows down

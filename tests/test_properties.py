@@ -10,7 +10,8 @@ import math
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from granian_k8s_autoscaler.config import QueueScalerConfig, ReflexConfig
+from granian_k8s_autoscaler.config import GuardConfig, QueueScalerConfig, ReflexConfig
+from granian_k8s_autoscaler.core.guard import Guard
 from granian_k8s_autoscaler.core.queue import QueueScaler
 from granian_k8s_autoscaler.core.types import PodSample, QueueObservation, WebObservation, WorkerSample
 from granian_k8s_autoscaler.core.web import WebScaler
@@ -195,3 +196,30 @@ def test_web_floor_never_collapses_below_bound(steps):
         floor_ms = d.metrics.get("service_time_floor_ms")
         if floor_ms is not None:
             assert floor_ms >= bound * 1000 - 1e-9, f"floor {floor_ms} ms < bound {bound * 1000} ms"
+
+
+@SETTINGS
+@given(
+    st.integers(1, 6),
+    st.integers(1, 6),
+    st.floats(1.0, 5000.0),
+    st.lists(st.floats(0.5, 5000.0), min_size=1, max_size=10),
+    st.floats(0.0, 20000.0),
+)
+def test_guard_never_freezes_a_step_that_beats_the_lowest_baseline_it_saw(old, extra, mu0, waiting, after):
+    """A throughput spike at scale time must not make a paying step look like a failure."""
+    new = old + extra
+    cfg = GuardConfig()
+    g = Guard(cfg, "web")
+    g.scaled(0.0, old, new, mu0)
+    t = 0.0
+    for tp in waiting:
+        t += 1.0
+        g.observe(t, old, tp, True)
+    t += 1.0
+    g.observe(t, new, after, True)
+    events = g.observe(t + cfg.settle_sec + 0.1, new, after, True)
+    baseline = min(mu0, *waiting)
+    expected = baseline * (new / old - 1.0)
+    if after - baseline >= cfg.efficiency * expected:
+        assert events == []

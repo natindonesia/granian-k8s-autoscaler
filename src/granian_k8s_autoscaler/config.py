@@ -50,6 +50,10 @@ class GuardConfig:
     # to freeze_max_sec; a successful step resets it.
     freeze_sec: float = 120.0
     freeze_max_sec: float = 1800.0
+    # The consecutive-failure count (and with it the doubled freeze and the
+    # one-pod-at-a-time probing) resets this long after a freeze has ended, so a
+    # judgement made minutes ago does not shape the response to a new shock.
+    failure_decay_sec: float = 300.0
 
 
 @dataclass
@@ -245,6 +249,7 @@ def _validate_guard(g: GuardConfig, path: str) -> None:
     _check(g.settle_sec >= 0, f"{path}.settle_sec must be >= 0")
     _check(g.freeze_sec >= 0, f"{path}.freeze_sec must be >= 0")
     _check(g.freeze_max_sec >= g.freeze_sec, f"{path}.freeze_max_sec must be >= freeze_sec")
+    _check(g.failure_decay_sec >= 0, f"{path}.failure_decay_sec must be >= 0")
 
 
 def _validate_service_time(s: ServiceTimeConfig, path: str) -> None:

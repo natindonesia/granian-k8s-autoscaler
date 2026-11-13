@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "granian-k8s-autoscaler"
-version = "0.1.1"
+version = "0.1.2"
 description = "Shock-resistant autoscaling signals and reflex for Granian web pods and RQ workers on Kubernetes (KEDA-friendly, no Helm required)."
 readme = "README.md"
 license = "Apache-2.0"

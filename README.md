@@ -53,8 +53,10 @@ computed demand, which scales up more. Three independent brakes:
    judged.
 3. A **hill-climb guard** judges each settled step: if it started saturated and throughput did not
    rise by at least `guard.efficiency` of the linear expectation, the extra pods bought nothing.
-   Desired replicas fall back to the pre-step count, the freeze doubles on every consecutive failure
-   (up to `freeze_max_sec`), and later probes advance one pod at a time.
+   The baseline is the lowest throughput seen while the new pods start, so a burst peak at scale
+   time cannot fake a failure. Desired replicas fall back to the pre-step count, the freeze doubles
+   on every consecutive failure (up to `freeze_max_sec`), and later probes advance one pod at a
+   time. The failure count resets `failure_decay_sec` after a freeze ends.
 
 Failure is bounded and safe: every number is clamped to `[min_replicas, max_replicas]`; the reflex
 is up-only with a bounded step; a blind or stale scaler answers **HTTP 503** so KEDA applies its

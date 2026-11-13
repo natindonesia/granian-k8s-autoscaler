@@ -33,6 +33,7 @@ def test_nested_unknown_key_is_an_error():
         {"web": {"reflex": {"overload_pod_fraction": 0}}},
         {"web": {"service_time": {"sizing_inflation_cap": 0.5}}},
         {"web": {"guard": {"freeze_sec": 100, "freeze_max_sec": 10}}},
+        {"web": {"guard": {"failure_decay_sec": -1}}},
         {"queues": [{"name": "a", "queues": []}]},
         {"queues": [{"name": "a"}, {"name": "a"}]},
         {"web": {"name": "x"}, "queues": [{"name": "x"}]},
