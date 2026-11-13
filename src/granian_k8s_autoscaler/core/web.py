@@ -195,6 +195,9 @@ class WebScaler:
                 self.floor = self.service_time
             else:
                 self.floor = min(self.service_time, self.floor * (1.0 + st.floor_rise_per_sec * dt))
+            # Hard lower bound: idle kubelet health-check pings can return in
+            # <1 ms, collapsing the floor and blinding the demand model.
+            self.floor = max(self.floor, st.floor_min_bound_sec)
             self.floor_valid_sec += dt
         s_live = self.service_time if self.service_time is not None else cfg.service_time_prior_sec
         if self.floor is not None and self.floor_valid_sec >= st.floor_min_sec:

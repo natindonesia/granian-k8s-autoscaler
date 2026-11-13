@@ -77,9 +77,13 @@ def test_web_safety_invariants(steps, min_r, extra, max_step, reflex_on):
         if d.reflex_target is not None:
             # S1: up-only, bounded step, within max, never when disabled.
             assert reflex_on
-            assert obs.spec_replicas is not None
-            assert obs.spec_replicas < d.reflex_target <= cfg.max_replicas
-            assert d.reflex_target <= obs.spec_replicas + max_step
+            # Reflex fires based on self.spec (last known spec), not necessarily
+            # obs.spec_replicas (which may be None if the API was blind this tick).
+            # The metric spec_replicas reflects self.spec at time of decision.
+            spec_at_decision = d.metrics["spec_replicas"]
+            assert spec_at_decision is not None
+            assert spec_at_decision < d.reflex_target <= cfg.max_replicas
+            assert d.reflex_target <= spec_at_decision + max_step
             # S2/S3: only with a queue on enough pods.
             queued = [s for ip, s in obs.samples.items() if ip in obs.targets and s.queue > 0]
             assert queued
@@ -172,3 +176,22 @@ def test_queue_safety_invariants(steps, min_r, extra, max_step):
             assert v is None or isinstance(v, bool | int | float), k
             if isinstance(v, float):
                 assert math.isfinite(v), (k, v)
+
+
+@SETTINGS
+@given(web_steps())
+def test_web_floor_never_collapses_below_bound(steps):
+    """The learned service-time floor must never drop below floor_min_bound_sec.
+
+    Idle kubelet health-check pings can resolve in <1 ms. Without a hard lower
+    bound, the floor collapses and the demand model is blinded under any real load.
+    """
+    from granian_k8s_autoscaler.config import ServiceTimeConfig
+
+    bound = ServiceTimeConfig().floor_min_bound_sec
+    scaler = WebScaler(web_cfg())
+    for obs in steps:
+        d = scaler.step(obs)
+        floor_ms = d.metrics.get("service_time_floor_ms")
+        if floor_ms is not None:
+            assert floor_ms >= bound * 1000 - 1e-9, f"floor {floor_ms} ms < bound {bound * 1000} ms"

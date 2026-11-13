@@ -69,6 +69,10 @@ class ServiceTimeConfig:
     # This bounds the loop gain: downstream slowness caused by our own
     # scale-up can inflate computed demand by at most this factor.
     sizing_inflation_cap: float = 1.5
+    # Hard lower bound on the learned floor. Prevents pathological collapse
+    # (e.g. idle kubelet pings returning in <1 ms) from blinding the demand
+    # model. 50 ms is a conservative lower bound for real Frappe requests.
+    floor_min_bound_sec: float = 0.05
 
 
 @dataclass

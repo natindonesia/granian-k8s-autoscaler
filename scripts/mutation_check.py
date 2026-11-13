@@ -27,6 +27,10 @@ MUTATIONS = {
     "reflex without confirmation": ("if confirmed and rc.enabled", "if overload and rc.enabled"),
     "reflex ignores pod fraction": ("and overloaded / scraped >= rc.overload_pod_fraction", ""),
     "reflex without queue": ("and queue_total > 0\n            and overloaded", "and overloaded"),
+    "no floor min bound": (
+        "self.floor = max(self.floor, st.floor_min_bound_sec)",
+        "self.floor = self.floor",
+    ),
 }
 
 
